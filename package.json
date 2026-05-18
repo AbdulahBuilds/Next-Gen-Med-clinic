@@ -1,0 +1,18 @@
+{
+  "name": "ai-clinic-management",
+  "version": "1.0.0",
+  "description": "AI Clinic Management System",
+  "scripts": {
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && nodemon server.js",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.14"
+  },
+  "dependencies": {
+    "mongodb": "^7.2.0"
+  }
+}

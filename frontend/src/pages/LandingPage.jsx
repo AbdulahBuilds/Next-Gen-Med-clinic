@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import API from '../api';
 import axios from 'axios';
 import { Shield, Stethoscope, ClipboardList, Heart, Star, ArrowRight, Phone, Mail, MapPin, Activity } from 'lucide-react';
 
@@ -11,13 +12,10 @@ const LandingPage = () => {
     // Fetch dynamic roles for display - fallback to defaults
     const fetchRoles = async () => {
       try {
-        const token = sessionStorage.getItem('token');
-        if (token) {
-          const res = await axios.get('http://localhost:5000/api/roles', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          setRoles(res.data);
-        }
+        const res = await API.get('/api/roles', {
+          headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` }
+        });
+        setRoles(res.data);
       } catch {
         // Use defaults if not logged in
       }

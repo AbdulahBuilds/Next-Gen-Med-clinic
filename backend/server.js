@@ -34,20 +34,25 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-mongoose.connect(process.env.MONGO_URI)
-.then(async () => {
-    console.log('Connected to MongoDB');
-    // Seed default roles if none exist
-    const count = await Role.countDocuments();
-    if (count === 0) {
-        await Role.insertMany([
-            { name: 'Admin', description: 'System Administrator' },
-            { name: 'Doctor', description: 'Medical Doctor' },
-            { name: 'Receptionist', description: 'Front Desk Staff' },
-            { name: 'Patient', description: 'Clinic Patient' },
-        ]);
-        console.log('Default roles seeded.');
-    }
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-})
-.catch(err => console.error('MongoDB connection error:', err));
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    
+    mongoose.connect(process.env.MONGO_URI)
+    .then(async () => {
+        console.log('Connected to MongoDB');
+        // Seed default roles if none exist
+        const count = await Role.countDocuments();
+        if (count === 0) {
+            await Role.insertMany([
+                { name: 'Admin', description: 'System Administrator' },
+                { name: 'Doctor', description: 'Medical Doctor' },
+                { name: 'Receptionist', description: 'Front Desk Staff' },
+                { name: 'Patient', description: 'Clinic Patient' },
+            ]);
+            console.log('Default roles seeded.');
+        }
+    })
+    .catch(err => {
+        console.error('CRITICAL: MongoDB connection error:', err);
+    });
+});

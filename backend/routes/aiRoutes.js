@@ -14,6 +14,10 @@ router.post('/symptom-checker', protect, async (req, res) => {
 
         const { symptoms, age, gender, history, patientId } = req.body;
         
+        if (!process.env.GEMINI_API_KEY) {
+            return res.status(503).json({ message: 'GEMINI_API_KEY is not configured on the server. Please add it to your .env file.' });
+        }
+
         const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
         
         const prompt = `
@@ -30,7 +34,7 @@ router.post('/symptom-checker', protect, async (req, res) => {
         `;
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.0-flash',
             contents: prompt,
         });
         
@@ -74,6 +78,10 @@ router.post('/explain-prescription', protect, async (req, res) => {
     try {
         const { instructions, medicines } = req.body;
         
+        if (!process.env.GEMINI_API_KEY) {
+            return res.status(503).json({ message: 'GEMINI_API_KEY is not configured on the server. Please add it to your .env file.' });
+        }
+
         const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
         const prompt = `
         Explain this prescription to a patient in very simple terms.
@@ -87,7 +95,7 @@ router.post('/explain-prescription', protect, async (req, res) => {
         `;
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.0-flash',
             contents: prompt,
         });
 

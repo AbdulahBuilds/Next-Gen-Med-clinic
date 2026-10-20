@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react';
+import { useContext, useState, useEffect, useCallback } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { LogOut, Calendar, FileText, Activity, Menu, Stethoscope } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -15,24 +15,36 @@ const DoctorDashboard = () => {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [prescriptionForm, setPrescriptionForm] = useState({ medicines: [], name: '', dosage: '', duration: '', instructions: '' });
 
-  useEffect(() => { fetchAppointments(); }, []);
+  const fetchAppointments = useCallback(async () => {
+    try {
+      const res = await API.get('/api/appointments');
+      setAppointments(res.data);
+    } catch (error) {
+      console.error(error);
+    }
+  }, []);
 
-  const getHeaders = () => ({ headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` } });
-
-  const fetchAppointments = async () => {
-    try { const res = await API.get('/api/appointments', getHeaders()); setAppointments(res.data); }
-    catch (error) { console.error(error); }
-  };
+  useEffect(() => {
+    fetchAppointments();
+  }, [fetchAppointments]);
 
   const handleStatusUpdate = async (id, status) => {
-    try { await API.put(`/api/appointments/${id}/status`, { status }, getHeaders()); fetchAppointments(); }
-    catch (error) { console.error(error); }
+    try {
+      await API.put(`/api/appointments/${id}/status`, { status });
+      fetchAppointments();
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const handleSymptomCheck = async (e) => {
-    e.preventDefault(); setIsAiLoading(true);
+    e.preventDefault();
+    setIsAiLoading(true);
     try {
-      const res = await API.post('/api/ai/symptom-checker', { ...symptomForm, patientId: selectedAppointment.patientId._id }, getHeaders());
+      const res = await API.post('/api/ai/symptom-checker', {
+        ...symptomForm,
+        patientId: selectedAppointment?.patientId?._id
+      });
       setAiResponse(res.data);
     } catch (error) {
       const msg = error.response?.data?.message || 'AI analysis failed.';
@@ -49,7 +61,12 @@ const DoctorDashboard = () => {
   const handleSavePrescription = async () => {
     if (prescriptionForm.medicines.length === 0) { alert("Add at least one medicine."); return; }
     try {
-      await API.post('/api/prescriptions', { patientId: selectedAppointment.patientId._id, appointmentId: selectedAppointment._id, medicines: prescriptionForm.medicines, instructions: prescriptionForm.instructions }, getHeaders());
+      await API.post('/api/prescriptions', {
+        patientId: selectedAppointment?.patientId?._id,
+        appointmentId: selectedAppointment?._id,
+        medicines: prescriptionForm.medicines,
+        instructions: prescriptionForm.instructions
+      });
       handleStatusUpdate(selectedAppointment._id, 'completed');
       alert('Prescription saved!');
       setSelectedAppointment(null);

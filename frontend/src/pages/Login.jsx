@@ -1,8 +1,7 @@
-import React, { useState, useContext, useEffect } from 'react';
+import { useState, useContext } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { Stethoscope, LogIn } from 'lucide-react';
-import axios from 'axios';
 
 const Login = () => {
   const [email, setEmail] = useState('');

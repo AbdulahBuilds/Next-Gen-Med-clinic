@@ -45,14 +45,32 @@ router.post('/', protect, async (req, res) => {
 // Update appointment status
 router.put('/:id/status', protect, async (req, res) => {
     try {
-        const appointment = await Appointment.findById(req.params.id);
-        if (appointment) {
-            appointment.status = req.body.status;
-            const updated = await appointment.save();
-            res.json(updated);
-        } else {
-            res.status(404).json({ message: 'Appointment not found' });
+        const { status } = req.body;
+        const validStatuses = ['pending', 'confirmed', 'completed', 'cancelled'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ message: 'Invalid status value' });
         }
+
+        const appointment = await Appointment.findById(req.params.id);
+        if (!appointment) {
+            return res.status(404).json({ message: 'Appointment not found' });
+        }
+
+        // Doctor, Receptionist, Admin can update status
+        // Patient can only cancel their own appointment
+        if (req.user.role === 'Patient') {
+            const patient = await Patient.findOne({ email: req.user.email });
+            if (!patient || String(appointment.patientId) !== String(patient._id)) {
+                return res.status(403).json({ message: 'Not authorized to modify this appointment' });
+            }
+            if (status !== 'cancelled') {
+                return res.status(403).json({ message: 'Patients can only cancel appointments' });
+            }
+        }
+
+        appointment.status = status;
+        const updated = await appointment.save();
+        res.json(updated);
     } catch (error) {
         res.status(400).json({ message: error.message });
     }

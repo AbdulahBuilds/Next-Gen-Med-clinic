@@ -1,9 +1,41 @@
-import React, { useContext, useState, useEffect } from 'react';
+import { useContext, useState, useEffect, useCallback } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { LogOut, LayoutDashboard, Users, Activity, Crown, Trash2, Shield, Menu, X, Plus } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, Activity, Crown, Trash2, Shield, Menu, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import API from '../api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+
+const navItems = [
+  { id: 'analytics', label: 'Analytics', icon: LayoutDashboard },
+  { id: 'users', label: 'Manage Staff', icon: Users },
+  { id: 'roles', label: 'Role Management', icon: Shield },
+  { id: 'saas', label: 'SaaS Plans', icon: Crown },
+];
+
+const Sidebar = ({ activeTab, setActiveTab, setSidebarOpen, handleLogout }) => (
+  <div className="flex flex-col h-full p-6">
+    <div className="flex items-center space-x-2 mb-8">
+      <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg flex items-center justify-center flex-shrink-0">
+        <Shield size={16} className="text-white" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-white font-bold text-xs leading-tight truncate">NEXT GEN MED CLINIC</p>
+        <p className="text-slate-400 text-xs">Admin Panel</p>
+      </div>
+    </div>
+    <nav className="flex-1 space-y-1">
+      {navItems.map(({ id, label, icon: Icon }) => (
+        <button key={id} onClick={() => { setActiveTab(id); setSidebarOpen(false); }}
+          className={`w-full flex items-center space-x-3 py-2.5 px-4 rounded-lg transition text-sm font-medium ${activeTab === id ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`}>
+          <Icon size={18} /><span>{label}</span>
+        </button>
+      ))}
+    </nav>
+    <button onClick={handleLogout} className="flex items-center space-x-2 text-slate-400 hover:text-white py-2 px-4 text-sm transition">
+      <LogOut size={18} /><span>Logout</span>
+    </button>
+  </div>
+);
 
 const AdminDashboard = () => {
   const { user, logout } = useContext(AuthContext);
@@ -18,33 +50,29 @@ const AdminDashboard = () => {
   const [newRoleName, setNewRoleName] = useState('');
   const [newRoleDesc, setNewRoleDesc] = useState('');
 
-  useEffect(() => { fetchData(); }, []);
-
-  const getHeaders = () => ({
-    headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` }
-  });
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [uRes, pRes, aRes, rRes] = await Promise.all([
-        API.get('/api/auth/users', getHeaders()),
-        API.get('/api/patients', getHeaders()),
-        API.get('/api/appointments', getHeaders()),
-        API.get('/api/roles', getHeaders()),
+        API.get('/api/auth/users'),
+        API.get('/api/patients'),
+        API.get('/api/appointments'),
+        API.get('/api/roles'),
       ]);
       setUsersList(uRes.data);
       setPatients(pRes.data);
       setAppointments(aRes.data);
       setRoles(rRes.data);
     } catch (error) { console.error(error); }
-  };
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleLogout = () => { logout(); navigate('/'); };
 
   const handleDeleteUser = async (id) => {
     if (!window.confirm("Are you sure you want to delete this staff member?")) return;
     try {
-      await API.delete(`/api/auth/users/${id}`, getHeaders());
+      await API.delete(`/api/auth/users/${id}`);
       fetchData();
     } catch (error) {
       alert("Failed to delete user: " + (error.response?.data?.message || error.message));
@@ -55,7 +83,7 @@ const AdminDashboard = () => {
     e.preventDefault();
     if (!newRoleName.trim()) return;
     try {
-      await API.post('/api/roles', { name: newRoleName, description: newRoleDesc }, getHeaders());
+      await API.post('/api/roles', { name: newRoleName, description: newRoleDesc });
       setNewRoleName('');
       setNewRoleDesc('');
       fetchData();
@@ -67,9 +95,9 @@ const AdminDashboard = () => {
   const handleDeleteRole = async (id) => {
     if (!window.confirm("Delete this role?")) return;
     try {
-      await API.delete(`/api/roles/${id}`, getHeaders());
+      await API.delete(`/api/roles/${id}`);
       fetchData();
-    } catch (error) { alert("Failed to delete role"); }
+    } catch { alert("Failed to delete role"); }
   };
 
   const getRevenueData = () => {
@@ -102,43 +130,11 @@ const AdminDashboard = () => {
   const appointmentTrends = getAppointmentTrends();
   const totalRevenue = revenueData.reduce((sum, item) => sum + item.revenue, 0);
 
-  const navItems = [
-    { id: 'analytics', label: 'Analytics', icon: LayoutDashboard },
-    { id: 'users', label: 'Manage Staff', icon: Users },
-    { id: 'roles', label: 'Role Management', icon: Shield },
-    { id: 'saas', label: 'SaaS Plans', icon: Crown },
-  ];
-
-  const Sidebar = () => (
-    <div className="flex flex-col h-full p-6">
-      <div className="flex items-center space-x-2 mb-8">
-        <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg flex items-center justify-center flex-shrink-0">
-          <Shield size={16} className="text-white" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-white font-bold text-xs leading-tight truncate">NEXT GEN MED CLINIC</p>
-          <p className="text-slate-400 text-xs">Admin Panel</p>
-        </div>
-      </div>
-      <nav className="flex-1 space-y-1">
-        {navItems.map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => { setActiveTab(id); setSidebarOpen(false); }}
-            className={`w-full flex items-center space-x-3 py-2.5 px-4 rounded-lg transition text-sm font-medium ${activeTab === id ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`}>
-            <Icon size={18} /><span>{label}</span>
-          </button>
-        ))}
-      </nav>
-      <button onClick={handleLogout} className="flex items-center space-x-2 text-slate-400 hover:text-white py-2 px-4 text-sm transition">
-        <LogOut size={18} /><span>Logout</span>
-      </button>
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Desktop Sidebar */}
       <div className="hidden md:flex w-64 bg-slate-900 flex-col h-screen sticky top-0 flex-shrink-0">
-        <Sidebar />
+        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} setSidebarOpen={setSidebarOpen} handleLogout={handleLogout} />
       </div>
 
       {/* Mobile Sidebar Overlay */}
@@ -146,7 +142,7 @@ const AdminDashboard = () => {
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0 bg-black/60" onClick={() => setSidebarOpen(false)} />
           <div className="absolute left-0 top-0 bottom-0 w-64 bg-slate-900">
-            <Sidebar />
+            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} setSidebarOpen={setSidebarOpen} handleLogout={handleLogout} />
           </div>
         </div>
       )}

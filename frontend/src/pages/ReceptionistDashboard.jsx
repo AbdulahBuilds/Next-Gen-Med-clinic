@@ -1,6 +1,6 @@
-import React, { useContext, useState, useEffect } from 'react';
+import { useContext, useState, useEffect, useCallback } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { LogOut, UserPlus, CalendarDays, Users, Menu, Stethoscope } from 'lucide-react';
+import { LogOut, CalendarDays, Users, Menu, Stethoscope, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
 
@@ -17,37 +17,41 @@ const ReceptionistDashboard = () => {
   const [appointmentForm, setAppointmentForm] = useState({ patientId: '', doctorId: '', date: '', time: '' });
   const [selectedDoctorFee, setSelectedDoctorFee] = useState(null);
 
-  useEffect(() => { fetchPatients(); fetchAppointments(); fetchDoctors(); }, []);
+  const fetchPatients = useCallback(async () => {
+    try { const res = await API.get('/api/patients'); setPatients(res.data); }
+    catch (e) { console.error(e); }
+  }, []);
 
-  const getHeaders = () => ({ headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` } });
+  const fetchAppointments = useCallback(async () => {
+    try { const res = await API.get('/api/appointments'); setAppointments(res.data); }
+    catch (e) { console.error(e); }
+  }, []);
 
-  const fetchPatients = async () => {
-    try { const res = await API.get('/api/patients', getHeaders()); setPatients(res.data); }
+  const fetchDoctors = useCallback(async () => {
+    try { const res = await API.get('/api/auth/users?role=Doctor'); setDoctors(res.data); }
     catch (e) { console.error(e); }
-  };
-  const fetchAppointments = async () => {
-    try { const res = await API.get('/api/appointments', getHeaders()); setAppointments(res.data); }
-    catch (e) { console.error(e); }
-  };
-  const fetchDoctors = async () => {
-    try { const res = await API.get('/api/auth/users?role=Doctor', getHeaders()); setDoctors(res.data); }
-    catch (e) { console.error(e); }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchPatients();
+    fetchAppointments();
+    fetchDoctors();
+  }, [fetchPatients, fetchAppointments, fetchDoctors]);
 
   const handleRegisterPatient = async (e) => {
     e.preventDefault();
     try {
       if (editPatientId) {
-        await API.put(`/api/patients/${editPatientId}`, patientForm, getHeaders());
+        await API.put(`/api/patients/${editPatientId}`, patientForm);
         alert('Patient updated!');
       } else {
-        await API.post('/api/patients', patientForm, getHeaders());
+        await API.post('/api/patients', patientForm);
         alert('Patient registered!');
       }
       setPatientForm({ name: '', email: '', age: '', gender: 'Male', contact: '' });
       setEditPatientId(null);
       fetchPatients();
-    } catch (e) { alert('Failed: ' + (e.response?.data?.message || e.message)); }
+    } catch (err) { alert('Failed: ' + (err.response?.data?.message || err.message)); }
   };
 
   const handleEditClick = (p) => {
@@ -67,12 +71,12 @@ const ReceptionistDashboard = () => {
   const handleBookAppointment = async (e) => {
     e.preventDefault();
     try {
-      await API.post('/api/appointments', appointmentForm, getHeaders());
+      await API.post('/api/appointments', appointmentForm);
       setAppointmentForm({ patientId: '', doctorId: '', date: '', time: '' });
       setSelectedDoctorFee(null);
       fetchAppointments();
       alert('Appointment booked!');
-    } catch (e) { alert('Failed to book appointment'); }
+    } catch { alert('Failed to book appointment'); }
   };
 
   const handleLogout = () => { logout(); navigate('/'); };

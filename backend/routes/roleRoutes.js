@@ -4,8 +4,8 @@ const Role = require('../models/Role');
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 
-// GET all roles (any logged-in user can fetch for registration forms)
-router.get('/', protect, async (req, res) => {
+// GET all roles (public so registration & landing page can fetch available roles)
+router.get('/', async (req, res) => {
     try {
         const roles = await Role.find({}).sort({ name: 1 });
         res.json(roles);

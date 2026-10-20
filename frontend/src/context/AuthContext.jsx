@@ -1,50 +1,35 @@
-import React, { createContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState, useCallback } from 'react';
 import API from '../api';
 import { jwtDecode } from 'jwt-decode';
+import { AuthContext } from './authContextDef';
 
-export const AuthContext = createContext();
+export { AuthContext };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
+  const [user, setUser] = useState(() => {
     const token = sessionStorage.getItem('token');
     const storedUser = sessionStorage.getItem('user');
 
     if (token && storedUser) {
       try {
         const decoded = jwtDecode(token);
-        if (decoded.exp * 1000 < Date.now()) {
-          // Token expired
-          logout();
-        } else {
-          setUser(JSON.parse(storedUser));
+        if (decoded.exp * 1000 >= Date.now()) {
+          return JSON.parse(storedUser);
         }
-      } catch (err) {
-        logout();
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
+      } catch {
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
       }
     }
-    setLoading(false);
-  }, []);
+    return null;
+  });
 
-  useEffect(() => {
-    const interceptor = axios.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response && error.response.status === 401) {
-          logout();
-          // Provide a tiny delay so logout state propagates before hard redirect, or rely on ProtectedRoute
-          window.location.href = '/login';
-        }
-        return Promise.reject(error);
-      }
-    );
-
-    return () => {
-      axios.interceptors.response.eject(interceptor);
-    };
+  const logout = useCallback(() => {
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    setUser(null);
   }, []);
 
   const login = async (email, password) => {
@@ -63,14 +48,8 @@ export const AuthProvider = ({ children }) => {
     return res.data;
   };
 
-  const logout = () => {
-    sessionStorage.removeItem('token');
-    sessionStorage.removeItem('user');
-    setUser(null);
-  };
-
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, loading: false }}>
       {children}
     </AuthContext.Provider>
   );

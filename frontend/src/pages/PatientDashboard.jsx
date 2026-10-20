@@ -1,6 +1,6 @@
-import React, { useContext, useState, useEffect } from 'react';
+import { useContext, useState, useEffect, useCallback } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { LogOut, User, Calendar, FileText, Sparkles, Download, Clock, Menu, Stethoscope } from 'lucide-react';
+import { LogOut, User, Calendar, FileText, Sparkles, Download, Clock, Stethoscope } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
 import jsPDF from 'jspdf';
@@ -16,33 +16,22 @@ const PatientDashboard = () => {
   const [aiExplanation, setAiExplanation] = useState('');
   const [explainingId, setExplainingId] = useState(null);
 
-  const [diagnoses, setDiagnoses] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [timeline, setTimeline] = useState([]);
   const [appointmentForm, setAppointmentForm] = useState({ doctorId: '', date: '', time: '' });
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedDoctorFee, setSelectedDoctorFee] = useState(null);
 
-  useEffect(() => {
-    fetchPatientData();
-  }, []);
-
-  const getHeaders = () => ({
-    headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` }
-  });
-
-  const fetchPatientData = async () => {
+  const fetchPatientData = useCallback(async () => {
     try {
-      const appRes = await API.get('/api/appointments', getHeaders());
+      const appRes = await API.get('/api/appointments');
       setAppointments(appRes.data);
 
-      const presRes = await API.get('/api/prescriptions', getHeaders());
+      const presRes = await API.get('/api/prescriptions');
       setPrescriptions(presRes.data);
 
-      const diagRes = await API.get('/api/ai/diagnosis', getHeaders());
-      setDiagnoses(diagRes.data);
+      const diagRes = await API.get('/api/ai/diagnosis');
       
-      const docRes = await API.get('/api/auth/users?role=Doctor', getHeaders());
+      const docRes = await API.get('/api/auth/users?role=Doctor');
       setDoctors(docRes.data);
 
       // Build unified timeline
@@ -53,7 +42,11 @@ const PatientDashboard = () => {
       t.sort((a,b) => b.date - a.date);
       setTimeline(t);
     } catch (error) { console.error(error); }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchPatientData();
+  }, [fetchPatientData]);
 
   const handleExplainPrescription = async (prescription) => {
     setExplainingId(prescription._id);
@@ -61,9 +54,9 @@ const PatientDashboard = () => {
       const res = await API.post('/api/ai/explain-prescription', {
         instructions: prescription.instructions,
         medicines: prescription.medicines
-      }, getHeaders());
+      });
       setAiExplanation(res.data.explanation);
-    } catch (error) {
+    } catch {
       alert('Failed to load AI explanation.');
     }
     setExplainingId(null);
@@ -79,7 +72,7 @@ const PatientDashboard = () => {
   const handleBookAppointment = async (e) => {
     e.preventDefault();
     try {
-      await API.post('/api/appointments', appointmentForm, getHeaders());
+      await API.post('/api/appointments', appointmentForm);
       setAppointmentForm({ doctorId: '', date: '', time: '' });
       fetchPatientData();
       alert('Appointment booked successfully!');
@@ -293,7 +286,7 @@ const PatientDashboard = () => {
             <div>
               <h2 className="text-2xl font-bold mb-6">Medical History Timeline</h2>
               <div className="relative border-l-2 border-indigo-200 ml-4 space-y-8 pb-4">
-                {timeline.map((item, index) => (
+                {timeline.map((item) => (
                   <div key={`${item.type}-${item.id}`} className="relative pl-6">
                     {/* Timeline Dot */}
                     <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-white ${item.type === 'Appointment' ? 'bg-green-500' : item.type === 'Prescription' ? 'bg-purple-500' : 'bg-red-500'}`}></div>

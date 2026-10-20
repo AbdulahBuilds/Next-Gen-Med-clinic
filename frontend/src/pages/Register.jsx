@@ -1,35 +1,39 @@
-import React, { useState, useContext, useEffect } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { Stethoscope, UserPlus } from 'lucide-react';
-import axios from 'axios';
+import API from '../api';
 
 const Register = () => {
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'Patient', consultationFee: '' });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [roles, setRoles] = useState([]);
-  const { register } = useContext(AuthContext);
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const prefilledRole = searchParams.get('role');
 
+  const [formData, setFormData] = useState(() => ({
+    name: '',
+    email: '',
+    password: '',
+    role: prefilledRole || 'Patient',
+    consultationFee: ''
+  }));
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [roles, setRoles] = useState(['Admin', 'Doctor', 'Receptionist', 'Patient']);
+  const { register } = useContext(AuthContext);
+  const navigate = useNavigate();
+
   useEffect(() => {
-    if (prefilledRole) {
-      setFormData(prev => ({ ...prev, role: prefilledRole }));
-    }
-    // Fetch dynamic roles from backend
     const fetchRoles = async () => {
       try {
-        // We can't fetch roles without auth, so we use defaults with option to add more
-        // This will be populated after first login or we fetch from public endpoint
-        setRoles(['Admin', 'Doctor', 'Receptionist', 'Patient']);
+        const res = await API.get('/api/roles');
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          setRoles(res.data.map(r => r.name));
+        }
       } catch {
         setRoles(['Admin', 'Doctor', 'Receptionist', 'Patient']);
       }
     };
     fetchRoles();
-  }, [prefilledRole]);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

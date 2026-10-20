@@ -34,27 +34,34 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    
-    mongoose.connect(process.env.MONGO_URI, {
-        family: 4
-    })
-    .then(async () => {
-        console.log('Connected to MongoDB');
-        // Seed default roles if none exist
-        const count = await Role.countDocuments();
-        if (count === 0) {
-            await Role.insertMany([
-                { name: 'Admin', description: 'System Administrator' },
-                { name: 'Doctor', description: 'Medical Doctor' },
-                { name: 'Receptionist', description: 'Front Desk Staff' },
-                { name: 'Patient', description: 'Clinic Patient' },
-            ]);
-            console.log('Default roles seeded.');
+const startServer = async () => {
+    const mongoUri = process.env.MONGO_URI;
+    if (!mongoUri) {
+        console.warn('⚠️ WARNING: MONGO_URI is not defined in .env. MongoDB connection skipped. Please configure .env to connect to database.');
+    } else {
+        try {
+            await mongoose.connect(mongoUri, { family: 4 });
+            console.log('Connected to MongoDB');
+
+            // Seed default roles if none exist
+            const count = await Role.countDocuments();
+            if (count === 0) {
+                await Role.insertMany([
+                    { name: 'Admin', description: 'System Administrator' },
+                    { name: 'Doctor', description: 'Medical Doctor' },
+                    { name: 'Receptionist', description: 'Front Desk Staff' },
+                    { name: 'Patient', description: 'Clinic Patient' },
+                ]);
+                console.log('Default roles seeded.');
+            }
+        } catch (err) {
+            console.error('CRITICAL: MongoDB connection error:', err.message);
         }
-    })
-    .catch(err => {
-        console.error('CRITICAL: MongoDB connection error:', err);
+    }
+
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
     });
-});
+};
+
+startServer();
